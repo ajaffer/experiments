@@ -12,24 +12,12 @@ public class ConsistentHashing {
     // non-cryptographic — the right tool for partitioning/rings.
     private static final HashFunction HASH = Hashing.murmur3_128();
 
-    // ---- Part 1: group-by ----
-    record Rec(String key, long value) {}
-    static Map<String, long[]> groupBy(List<Rec> records) {
-        Map<String, long[]> agg = new HashMap<>();
-        for (Rec r : records) {
-            long[] acc = agg.computeIfAbsent(r.key(), k -> new long[2]);
-            acc[0] += 1;
-            acc[1] += r.value();
-        }
-        return agg;
-    }
-
-    // ---- Part 2: fixed-partition routing ----
+    // ---- Part 1: fixed-partition routing ----
     static int partitionFor(String key, int numPartitions) {
         return Math.floorMod(hash32(key), numPartitions);
     }
 
-    // ---- Part 3: consistent hashing ring ----
+    // ---- Part 2: consistent hashing ring ----
     static final class ConsistentHashRing {
         private final TreeMap<Long, String> ring = new TreeMap<>();
         private final int vnodesPerNode;
@@ -57,20 +45,13 @@ public class ConsistentHashing {
 
     // ---- demo ----
     public static void main(String[] args) {
-        List<Rec> data = List.of(
-                new Rec("user_a", 10), new Rec("user_b", 3), new Rec("user_a", 7),
-                new Rec("user_c", 5), new Rec("user_b", 2), new Rec("user_a", 1));
-        System.out.println("== Part 1: group-by (key -> count, sum) ==");
-        new TreeMap<>(groupBy(data)).forEach((k, v) ->
-                System.out.printf("  %-8s count=%d sum=%d%n", k, v[0], v[1]));
-
-        System.out.println("\n== Part 2: fixed-partition routing (P=4) ==");
+        System.out.println("== Part 1: fixed-partition routing (P=4) ==");
         for (String k : List.of("user_a", "user_b", "user_c", "user_d", "user_e"))
             System.out.printf("  %-8s -> partition %d%n", k, partitionFor(k, 4));
 
 
         int K = 10_000;
-        System.out.println("\n== Part 3: adding one worker (3 -> 4), " + K + " keys ==");
+        System.out.println("\n== Part 2: adding one worker (3 -> 4), " + K + " keys ==");
         for (int vnodesPerNode = 1; vnodesPerNode <=16; vnodesPerNode++) {
             run(vnodesPerNode, K, 30);
         }

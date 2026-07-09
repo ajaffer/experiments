@@ -27,15 +27,14 @@ other experiment's `main` with:
 ### `org.experiments.ConsistentHashing`
 
 Explores how a consistent-hashing ring behaves as you vary the number of virtual
-nodes (vnodes) per physical node. Three parts:
+nodes (vnodes) per physical node. Two parts:
 
-1. **group-by** — a warm-up aggregation over records.
-2. **fixed-partition routing** — `hash(key) mod N`, the naive approach whose
+1. **fixed-partition routing** — `hash(key) mod N`, the naive approach whose
    ownership is upended whenever `N` changes.
-3. **consistent-hash ring** — a `TreeMap`-backed ring (Murmur3-128 hashing) with
+2. **consistent-hash ring** — a `TreeMap`-backed ring (Murmur3-128 hashing) with
    configurable vnodes per node.
 
-Part 3 sweeps vnodes from 1 to 16 and, over 30 randomized rings, reports two
+Part 2 sweeps vnodes from 1 to 16 and, over 30 randomized rings, reports two
 things when a 4th node joins a 3-node cluster (10k keys):
 
 - **movement** — the fraction of keys that relocate. The average sits near the
