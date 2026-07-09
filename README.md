@@ -12,14 +12,14 @@ Java 23 · Gradle 9.3 (wrapper) · JUnit 5 · Guava.
 ```bash
 ./gradlew build          # compile + test
 ./gradlew test           # tests only
+./gradlew run            # run the default experiment
 ```
 
-There's no `application` plugin, so run an experiment's `main` from your IDE, or
-from the command line after building:
+`run` launches `org.experiments.ConsistentHashing` by default. Point it at any
+other experiment's `main` with:
 
 ```bash
-CP="build/classes/java/main:$(find ~/.gradle/caches -name 'guava-*.jar' | head -1)"
-java -cp "$CP" org.experiments.ConsistentHashing
+./gradlew run -PmainClass=org.experiments.OtherExperiment
 ```
 
 ## Experiments
