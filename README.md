@@ -66,6 +66,8 @@ cost), production systems settle around 100–256 vnodes and stop. Measured `cv`
 tracks the theory, running slightly under at low vnode counts (an artifact of
 averaging a square root — see below).
 
+![Load imbalance (cv) vs. vnodes per node: measured over 30 rings against the closed-form 1/√V prediction, on a log x-axis. Both curves drop steeply then flatten and converge.](docs/cv-curve.svg)
+
 #### Why `cv ≈ √((N-1)/(N·V+1))`
 
 (`√` is the square-root sign; the entire fraction sits under the root.)
