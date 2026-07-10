@@ -122,9 +122,12 @@ public class ConsistentHashing {
 
     // Prints rows as a bordered table; row 0 is the header. Column widths auto-fit.
     private static void printBoxTable(List<String[]> rows) {
+        // Pass 1: width[c] = longest cell in column c, so every row and border can be
+        // drawn to a shared column size and the vertical dividers line up.
         int[] width = new int[rows.get(0).length];
         for (String[] row : rows)
             for (int c = 0; c < row.length; c++) width[c] = Math.max(width[c], row[c].length());
+        // Pass 2: draw borders and rows against those widths.
         printBorder(width, '┌', '┬', '┐');
         for (int r = 0; r < rows.size(); r++) {
             if (r > 0) printBorder(width, '├', '┼', '┤');
@@ -133,6 +136,8 @@ public class ConsistentHashing {
         printBorder(width, '└', '┴', '┘');
     }
 
+    // width[c] + 2 spans the one padding space on each side of a cell, matching printRow
+    // so the ┬/┼/┴ junctions sit exactly above the │ dividers.
     private static void printBorder(int[] width, char left, char mid, char right) {
         StringBuilder sb = new StringBuilder().append(left);
         for (int c = 0; c < width.length; c++)
@@ -140,6 +145,8 @@ public class ConsistentHashing {
         System.out.println(sb);
     }
 
+    // Each cell is " " + value left-justified to width[c] + " │"; the %- padding makes
+    // every closing divider land in the same column regardless of the value's length.
     private static void printRow(String[] cells, int[] width) {
         StringBuilder sb = new StringBuilder().append('│');
         for (int c = 0; c < cells.length; c++)
