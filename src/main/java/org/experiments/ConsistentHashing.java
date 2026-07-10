@@ -52,12 +52,17 @@ public class ConsistentHashing {
 
         int K = 10_000;
         System.out.println("\n== Part 2: adding one worker (3 -> 4), " + K);
-        for (int vnodesPerNode = 1; vnodesPerNode <=16; vnodesPerNode++) {
-            run(vnodesPerNode, K, 30);
-        }
+        Map<Integer, Result> byVnodes = new LinkedHashMap<>();
+        for (int vnodesPerNode = 1; vnodesPerNode <= 16; vnodesPerNode++)
+            byVnodes.put(vnodesPerNode, run(vnodesPerNode, K, 30));
+
+        System.out.println();
+        printSummary(byVnodes, 1, 8, 16);
     }
 
-    private static void run(int vnodesPerNode, int K, int trials) {
+    private record Result(double avgMoved, double minMoved, double maxMoved, double imbalance, double cv) {}
+
+    private static Result run(int vnodesPerNode, int K, int trials) {
         List<String> keys = new ArrayList<>();
         for (int i = 0; i < K; i++) keys.add("key-" + i);
 
@@ -82,6 +87,51 @@ public class ConsistentHashing {
         }
         System.out.printf("vnodes=%3d  avg=%4.1f%%  (min %4.1f, max %4.1f)  spread=%4.1f  imbalance=%4.2fx  cv=%4.2f%n",
                 vnodesPerNode, sum/trials, min, max, max - min, imbSum/trials, cvSum/trials);
+        return new Result(sum/trials, min, max, imbSum/trials, cvSum/trials);
+    }
+
+    // Renders a box-drawing summary of imbalance and cv at the given vnode levels.
+    private static void printSummary(Map<Integer, Result> byVnodes, int... levels) {
+        String[] header = new String[levels.length + 1];
+        String[] imbalance = new String[levels.length + 1];
+        String[] cv = new String[levels.length + 1];
+        header[0] = "";
+        imbalance[0] = "imbalance (busiest node)";
+        cv[0] = "cv (whole distribution)";
+        for (int i = 0; i < levels.length; i++) {
+            Result r = byVnodes.get(levels[i]);
+            header[i + 1] = levels[i] + (levels[i] == 1 ? " vnode" : " vnodes");
+            imbalance[i + 1] = String.format("%.2fx", r.imbalance());
+            cv[i + 1] = String.format("%.2f", r.cv());
+        }
+        printBoxTable(List.of(header, imbalance, cv));
+    }
+
+    // Prints rows as a bordered table; row 0 is the header. Column widths auto-fit.
+    private static void printBoxTable(List<String[]> rows) {
+        int[] width = new int[rows.get(0).length];
+        for (String[] row : rows)
+            for (int c = 0; c < row.length; c++) width[c] = Math.max(width[c], row[c].length());
+        printBorder(width, '┌', '┬', '┐');
+        for (int r = 0; r < rows.size(); r++) {
+            if (r > 0) printBorder(width, '├', '┼', '┤');
+            printRow(rows.get(r), width);
+        }
+        printBorder(width, '└', '┴', '┘');
+    }
+
+    private static void printBorder(int[] width, char left, char mid, char right) {
+        StringBuilder sb = new StringBuilder().append(left);
+        for (int c = 0; c < width.length; c++)
+            sb.append("─".repeat(width[c] + 2)).append(c == width.length - 1 ? right : mid);
+        System.out.println(sb);
+    }
+
+    private static void printRow(String[] cells, int[] width) {
+        StringBuilder sb = new StringBuilder().append('│');
+        for (int c = 0; c < cells.length; c++)
+            sb.append(' ').append(String.format("%-" + width[c] + "s", cells[c])).append(" │");
+        System.out.println(sb);
     }
 
     // Number of keys owned by each node in a key->node assignment.
