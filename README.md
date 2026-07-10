@@ -47,11 +47,21 @@ things when a 4th node joins a 3-node cluster (10k keys):
   (`stddev ÷ average`). A scale-free measure of *overall* balance across all
   nodes, not just the worst one. It falls from ~0.60 to ~0.17.
 
+After the sweep it prints a summary table comparing the measured `cv` against the
+closed-form prediction `√((N-1)/(N·V+1))` (N nodes, V vnodes each):
+
 ```
-vnodes=  1  avg=27.6%  (min  0.7, max 82.2)  spread=81.5  imbalance=1.76x  cv=0.60
-vnodes=  8  avg=24.5%  (min 11.1, max 39.1)  spread=28.0  imbalance=1.30x  cv=0.24
-vnodes= 16  avg=24.9%  (min 12.9, max 38.7)  spread=25.8  imbalance=1.20x  cv=0.17
+┌────────────────────────────┬─────────┬──────────┬───────────┬───────────┬───────────┬────────────┬────────────┐
+│                            │ 1 vnode │ 8 vnodes │ 16 vnodes │ 32 vnodes │ 64 vnodes │ 128 vnodes │ 256 vnodes │
+├────────────────────────────┼─────────┼──────────┼───────────┼───────────┼───────────┼────────────┼────────────┤
+│ imbalance (busiest node)   │ 1.76x   │ 1.30x    │ 1.20x     │ 1.16x     │ 1.12x     │ 1.08x      │ 1.06x      │
+│ cv (whole distribution)    │ 0.60    │ 0.24     │ 0.17      │ 0.13      │ 0.10      │ 0.07       │ 0.05       │
+│ cv theory  √((N-1)/(NV+1)) │ 0.71    │ 0.28     │ 0.20      │ 0.14      │ 0.10      │ 0.07       │ 0.05       │
+└────────────────────────────┴─────────┴──────────┴───────────┴───────────┴───────────┴────────────┴────────────┘
 ```
 
-**Takeaway:** more vnodes → tighter load balance and less variance in how much
-data reshuffles on a topology change, with diminishing returns past ~8–10.
+**Takeaway:** load balance improves as `1/√vnodes` — to *halve* the imbalance you
+must *quadruple* the vnodes. Since each vnode is a ring entry (memory + lookup
+cost), production systems settle around 100–256 vnodes and stop. Measured `cv`
+tracks the theory, running slightly under at low vnode counts (an artifact of
+averaging a square root — see below).

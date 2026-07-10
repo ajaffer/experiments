@@ -12,6 +12,9 @@ public class ConsistentHashing {
     // non-cryptographic — the right tool for partitioning/rings.
     private static final HashFunction HASH = Hashing.murmur3_128();
 
+    // The starting cluster: 3 nodes, before a 4th joins.
+    private static final List<String> NODES = List.of("nodeA", "nodeB", "nodeC");
+
     // ---- Part 1: fixed-partition routing ----
     static int partitionFor(String key, int numPartitions) {
         return Math.floorMod(hash32(key), numPartitions);
@@ -53,11 +56,11 @@ public class ConsistentHashing {
         int K = 10_000;
         System.out.println("\n== Part 2: adding one worker (3 -> 4), " + K);
         Map<Integer, Result> byVnodes = new LinkedHashMap<>();
-        for (int vnodesPerNode = 1; vnodesPerNode <= 16; vnodesPerNode++)
+        for (int vnodesPerNode = 1; vnodesPerNode <= 256; vnodesPerNode++)
             byVnodes.put(vnodesPerNode, run(vnodesPerNode, K, 30));
 
         System.out.println();
-        printSummary(byVnodes, 1, 8, 16);
+        printSummary(byVnodes, 1, 8, 16, 32, 64, 128, 256);
     }
 
     private record Result(double avgMoved, double minMoved, double maxMoved, double imbalance, double cv) {}
@@ -71,7 +74,7 @@ public class ConsistentHashing {
             String salt = "-run" + t;                       // different ring each trial
 
             ConsistentHashRing ring = new ConsistentHashRing(vnodesPerNode);
-            for (String n : List.of("nodeA", "nodeB", "nodeC"))
+            for (String n : NODES)
                 ring.addNode(n + salt);                      // salt shifts node positions
             Map<String, String> before = new HashMap<>();
             for (String k : keys) before.put(k, ring.getNode(k));
@@ -95,16 +98,26 @@ public class ConsistentHashing {
         String[] header = new String[levels.length + 1];
         String[] imbalance = new String[levels.length + 1];
         String[] cv = new String[levels.length + 1];
+        String[] theory = new String[levels.length + 1];
         header[0] = "";
         imbalance[0] = "imbalance (busiest node)";
         cv[0] = "cv (whole distribution)";
+        theory[0] = "cv theory  √((N-1)/(NV+1))";
         for (int i = 0; i < levels.length; i++) {
             Result r = byVnodes.get(levels[i]);
             header[i + 1] = levels[i] + (levels[i] == 1 ? " vnode" : " vnodes");
             imbalance[i + 1] = String.format("%.2fx", r.imbalance());
             cv[i + 1] = String.format("%.2f", r.cv());
+            theory[i + 1] = String.format("%.2f", theoryCv(NODES.size(), levels[i]));
         }
-        printBoxTable(List.of(header, imbalance, cv));
+        printBoxTable(List.of(header, imbalance, cv, theory));
+    }
+
+    // Closed-form CV of per-node load for N nodes with V vnodes each. The N*V vnode
+    // points cut the ring into N*V uniform-random arcs; a node owns V of them, so its
+    // load is a sum of V arc lengths whose CV works out to sqrt((N-1)/(N*V+1)).
+    private static double theoryCv(int nodes, int vnodes) {
+        return Math.sqrt((nodes - 1.0) / (nodes * vnodes + 1));
     }
 
     // Prints rows as a bordered table; row 0 is the header. Column widths auto-fit.
