@@ -122,7 +122,7 @@ public class ConsistentHashing {
 
     // Prints rows as a bordered table; row 0 is the header. Column widths auto-fit.
     private static void printBoxTable(List<String[]> rows) {
-        // Pass 1: width[c] = longest cell in column c, so every row and border can be
+        // Pass 1: width[c] = widest cell in column c, so every row and border can be
         // drawn to a shared column size and the vertical dividers line up.
         int[] width = new int[rows.get(0).length];
         for (String[] row : rows)
