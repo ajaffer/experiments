@@ -51,25 +51,26 @@ public class ConsistentHashing {
 
 
         int K = 10_000;
-        System.out.println("\n== Part 2: adding one worker (3 -> 4), " + K + " keys ==");
+        System.out.println("\n== Part 2: adding one worker (3 -> 4), " + K);
         for (int vnodesPerNode = 1; vnodesPerNode <=16; vnodesPerNode++) {
             run(vnodesPerNode, K, 30);
         }
     }
 
     private static void run(int vnodesPerNode, int K, int trials) {
+        List<String> keys = new ArrayList<>();
+        for (int i = 0; i < K; i++) keys.add("key-" + i);
+
         double sum = 0; double min = 100, max = 0; double imbSum = 0;
         for (int t = 0; t < trials; t++) {
             String salt = "-run" + t;                       // different ring each trial
-            List<String> keys = new ArrayList<>();
-            for (int i = 0; i < K; i++) keys.add("key-" + i);
 
             ConsistentHashRing ring = new ConsistentHashRing(vnodesPerNode);
             for (String n : List.of("nodeA", "nodeB", "nodeC"))
                 ring.addNode(n + salt);                      // salt shifts node positions
             Map<String, String> before = new HashMap<>();
             for (String k : keys) before.put(k, ring.getNode(k));
-            imbSum += imbalance(before, 3);                  // load balance of the 3-node ring
+            imbSum += imbalance(before);                     // load balance of the 3-node ring
             ring.addNode("nodeD" + salt);
 
             int moved = 0;
@@ -81,13 +82,14 @@ public class ConsistentHashing {
                 vnodesPerNode, sum/trials, min, max, max - min, imbSum/trials);
     }
 
-    // Load skew of a key->node assignment: busiest node's share of keys relative to
-    // the fair share (1.00x = perfectly even; 2.00x = busiest node holds twice its share).
-    private static double imbalance(Map<String, String> ownerByKey, int numNodes) {
-        Map<String, Integer> load = new HashMap<>();
-        for (String node : ownerByKey.values()) load.merge(node, 1, Integer::sum);
-        int max = load.values().stream().max(Integer::compare).orElse(0);
-        double mean = (double) ownerByKey.size() / numNodes;
-        return max / mean;
+    // Load skew of a key->node assignment: the busiest node's key count divided by the
+    // fair share (average keys per node). 1.00x = perfectly even; 2.00x = the busiest
+    // node holds twice its fair share.
+    private static double imbalance(Map<String, String> ownerByKey) {
+        Map<String, Integer> keysPerNode = new HashMap<>();
+        for (String node : ownerByKey.values()) keysPerNode.merge(node, 1, Integer::sum);
+        int busiestLoad = keysPerNode.values().stream().max(Integer::compare).orElse(0);
+        double fairShare = (double) ownerByKey.size() / keysPerNode.size();
+        return busiestLoad / fairShare;
     }
 }
