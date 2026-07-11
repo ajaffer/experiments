@@ -90,6 +90,31 @@ the average lands *below* the closed form. At low `V` the trial-to-trial varianc
 swings hard and the gap shows (0.60 vs 0.71); at high `V` every trial is nearly
 identical, the gap vanishes, and the two rows converge.
 
+#### Why the ring uses Murmur3, not `hashCode()`
+
+`HashSpread` shows why the ring can't use `Object.hashCode()`. It lays one node's 16
+vnodes on the ring under each hash. The names differ only in a trailing character
+(`nodeA#0`..`nodeA#15`), and `String.hashCode()` is a polynomial where the last char
+carries a weight of 1 — so the names map to near-consecutive values that **clump**,
+leaving most of the ring empty. Murmur3 avalanches them (one input bit flips ~half the
+output bits), so they **scatter**:
+
+```
+./gradlew run -PmainClass=org.experiments.hashing.HashSpread
+```
+```
+String.hashCode() [··················6················*····································]
+                  largest empty arc =  76.9% of the ring   (even spread ≈ 6.3%)
+
+Murmur3-128       [|····|·|·········|··|···············2··2··|·|····|·····|········||····|·]
+                  largest empty arc =  21.5% of the ring   (even spread ≈ 6.3%)
+```
+
+Clumped vnodes defeat the entire purpose of vnodes — a node's ownership collapses back
+into one big arc instead of many small ones — which is why ring placement needs a strong,
+uniform, portable hash, while the in-process `StripedLRUCache` (which only picks 1 of ~16
+shards) gets by with `hashCode()` plus a cheap bit-fold.
+
 ### `org.experiments.cache` — LRU cache
 
 An O(1) LRU cache: a `HashMap` for lookup plus an intrusive doubly-linked list
