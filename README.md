@@ -15,7 +15,7 @@ Java 23 · Gradle 9.3 (wrapper) · JUnit 5 · Guava.
 ./gradlew run            # run the default experiment
 ```
 
-`run` launches `org.experiments.ConsistentHashing` by default. Point it at any
+`run` launches `org.experiments.hashing.ConsistentHashing` by default. Point it at any
 other experiment's `main` with:
 
 ```bash
@@ -24,7 +24,7 @@ other experiment's `main` with:
 
 ## Experiments
 
-### `org.experiments.ConsistentHashing`
+### `org.experiments.hashing.ConsistentHashing`
 
 Explores how a consistent-hashing ring behaves as you vary the number of virtual
 nodes (vnodes) per physical node. Two parts:
@@ -89,3 +89,30 @@ That `1/√V` is the whole shape of the curve; everything else is a correction:
 the average lands *below* the closed form. At low `V` the trial-to-trial variance
 swings hard and the gap shows (0.60 vs 0.71); at high `V` every trial is nearly
 identical, the gap vanishes, and the two rows converge.
+
+### `org.experiments.cache` — LRU cache
+
+An O(1) LRU cache: a `HashMap` for lookup plus an intrusive doubly-linked list
+(sentinel head/tail) for recency order — most-recently-used at the tail, the
+eviction victim at `head.next`. `LRUCache` is the single-threaded core;
+`LRUCacheThreadSafe` extends it and guards `get`/`put` with a `ReentrantLock`.
+
+Two design points worth calling out:
+
+- **`get` is a mutation.** A hit moves the entry to the front, so the thread-safe
+  variant needs an *exclusive* lock. Reaching for a read/write lock's read side on
+  `get` would be a bug — two concurrent hits both rewrite the list.
+- **`null` values are rejected** (`Objects.requireNonNull` in `put`), so a `null`
+  from `get` unambiguously means "absent" rather than "present but null."
+
+This experiment has no `main` — it's exercised by tests:
+
+```bash
+./gradlew test
+```
+
+The behavioral tests are parameterized over both implementations (so the
+thread-safe subclass is proven observationally identical), plus two concurrency
+tests that hammer `LRUCacheThreadSafe` from 16 threads to catch a broken lock —
+one with no eviction (every key must survive) and one under heavy eviction (must
+never throw, deadlock, or corrupt).

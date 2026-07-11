@@ -1,6 +1,6 @@
-import org.experiments.Cache;
-import org.experiments.LRUCache;
-import org.experiments.LRUCacheThreadSafe;
+import org.experiments.cache.Cache;
+import org.experiments.cache.LRUCache;
+import org.experiments.cache.LRUCacheThreadSafe;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;

@@ -1,4 +1,4 @@
-package org.experiments;
+package org.experiments.cache;
 
 public interface Cache<U, V> {
     V get(U key);

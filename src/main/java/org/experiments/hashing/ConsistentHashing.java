@@ -1,4 +1,4 @@
-package org.experiments;
+package org.experiments.hashing;
 
 import java.nio.charset.StandardCharsets;
 import java.util.*;
