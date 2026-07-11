@@ -19,6 +19,12 @@ public class HashSpread {
     private static final int VNODES = 16;
     private static final int WIDTH = 72;        // characters across the ring strip
 
+    // a hex floating-point literal: 0x1.0p-32 means 1.0 × 2⁻³²
+    private static final double INTEGER_UNIT = 0x1.0p-32;
+
+    // a hex floating-point literal: 0x1.0p-53 means 1.0 × 2⁻⁵³ (the p is the binary exponent, like e is decimal).
+    private static final double DOUBLE_UNIT = 0x1.0p-53;
+    
     public static void main(String[] args) {
         System.out.println("Ring positions of nodeA#0 .. nodeA#" + (VNODES - 1)
                 + " — one node's " + VNODES + " vnodes (0.0 = ring start, 1.0 = ring end):\n");
@@ -55,18 +61,10 @@ public class HashSpread {
         return max;
     }
 
-
-    // a hex floating-point literal: 0x1.0p-32 means 1.0 × 2⁻³²
-    private static final double INTEGER_UNIT = 0x1.0p-32;
-
-
     private static double hashCodePosition(String key) {
         return (key.hashCode() & 0xFFFFFFFFL)
                 * INTEGER_UNIT;        // unsigned hashCode * 2^-32
     }
-
-    // a hex floating-point literal: 0x1.0p-53 means 1.0 × 2⁻⁵³ (the p is the binary exponent, like e is decimal).
-    private static final double DOUBLE_UNIT = 0x1.0p-53;
 
     private static double murmurPosition(String key) {
         long h = Hashing.murmur3_128().hashString(key, StandardCharsets.UTF_8).asLong();
