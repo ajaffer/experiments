@@ -130,7 +130,3 @@ broken lock. The approximate caches can't be tested by exact eviction order, so
 `ApproximateCacheTest` asserts **invariants** (size stays bounded, no corruption
 under a thread storm) and **statistics** (a hot set survives eviction; a larger
 sample size retains it better) — the right way to test an approximate structure.
-
-For the reasoning behind the whole progression — contention, striping, approximate
-LRU, TinyLFU, cache stampede, and CAP applied to caches — see
-[docs/concurrent-caching-notes.md](docs/concurrent-caching-notes.md).
