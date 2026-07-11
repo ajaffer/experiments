@@ -46,4 +46,4 @@ CLAUDE.md
 .claude/
 
 ### Personal / interview prep (not published) ###
-docs/concurrent-caching-notes.md
+docs/*-notes.md
