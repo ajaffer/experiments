@@ -29,7 +29,7 @@ public class StripedLRUCache<U, V> implements Cache<U, V> {
         this.mask = count - 1;
         this.shards = new LRUCacheThreadSafe[count];
 
-        int perShard = Math.max(1, (capacity + count - 1) / count);     // ceiling division
+        int perShard = Math.max(1, capacity / count + (capacity % count == 0 ? 0 : 1));   // ceiling division
         for (int i = 0; i < count; i++) this.shards[i] = new LRUCacheThreadSafe<>(perShard);
     }
 
