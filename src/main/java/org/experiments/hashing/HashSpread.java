@@ -55,12 +55,24 @@ public class HashSpread {
         return max;
     }
 
+
+    // a hex floating-point literal: 0x1.0p-32 means 1.0 × 2⁻³²
+    private static final double INTEGER_UNIT = 0x1.0p-32;
+
+
     private static double hashCodePosition(String key) {
-        return (key.hashCode() & 0xFFFFFFFFL) / 4_294_967_296.0;        // unsigned hashCode / 2^32
+        return (key.hashCode() & 0xFFFFFFFFL)
+                * INTEGER_UNIT;        // unsigned hashCode * 2^-32
     }
+
+    // a hex floating-point literal: 0x1.0p-53 means 1.0 × 2⁻⁵³ (the p is the binary exponent, like e is decimal).
+    private static final double DOUBLE_UNIT = 0x1.0p-53;
 
     private static double murmurPosition(String key) {
         long h = Hashing.murmur3_128().hashString(key, StandardCharsets.UTF_8).asLong();
-        return (h >>> 11) * 0x1.0p-53;                                   // top 53 bits mapped into [0,1)
+
+        // a double can only represent integers exactly up to 2⁵³, instead of using all 64 bits, we take the top 53
+        return (h >>> (64-53))
+                * DOUBLE_UNIT;                                   // top 53 bits mapped into [0,1)
     }
 }
