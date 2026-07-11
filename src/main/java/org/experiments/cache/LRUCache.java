@@ -69,6 +69,10 @@ public class LRUCache<U, V> implements Cache<U, V> {
         if (isOverCapacity()) evict();
     }
 
+    public int size() {
+        return registry.size();
+    }
+
     private void moveToFront(Node<U,V> node) {
         remove(node);
         addNode(node);

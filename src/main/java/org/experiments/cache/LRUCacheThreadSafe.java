@@ -35,5 +35,14 @@ public class LRUCacheThreadSafe<U, V> extends LRUCache<U, V> {
         }
     }
 
+    @Override
+    public int size() {
+        lock.lock();
 
+        try {
+            return super.size();
+        } finally {
+            lock.unlock();
+        }
+    }
 }

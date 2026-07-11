@@ -105,14 +105,32 @@ Two design points worth calling out:
 - **`null` values are rejected** (`Objects.requireNonNull` in `put`), so a `null`
   from `get` unambiguously means "absent" rather than "present but null."
 
+Then the same idea is pushed toward how real hyperscale caches actually work — a
+progression from *correct* to *concurrent*:
+
+- **`StripedLRUCache`** — N independently-locked shards routed by hashed key (the
+  `ConcurrentHashMap` lock-striping trick). Cuts contention ~N×, at the cost of
+  per-shard (non-global) eviction order.
+- **`RedisSampledLRUCache`** — Redis's `maxmemory-policy allkeys-lru`. Reads only
+  stamp a timestamp (no list mutation → **lock-free reads**); eviction samples K
+  random entries and drops the oldest. Approximate, but reads never contend.
+- **`CaffeineCache`** — a thin adapter over Caffeine (W-TinyLFU), the production
+  answer the other two approximate.
+
 This experiment has no `main` — it's exercised by tests:
 
 ```bash
 ./gradlew test
 ```
 
-The behavioral tests are parameterized over both implementations (so the
-thread-safe subclass is proven observationally identical), plus two concurrency
-tests that hammer `LRUCacheThreadSafe` from 16 threads to catch a broken lock —
-one with no eviction (every key must survive) and one under heavy eviction (must
-never throw, deadlock, or corrupt).
+The exact-LRU behavioral tests are parameterized over `LRUCache` /
+`LRUCacheThreadSafe` (so the thread-safe subclass is proven observationally
+identical), plus concurrency tests that hammer them from 16 threads to catch a
+broken lock. The approximate caches can't be tested by exact eviction order, so
+`ApproximateCacheTest` asserts **invariants** (size stays bounded, no corruption
+under a thread storm) and **statistics** (a hot set survives eviction; a larger
+sample size retains it better) — the right way to test an approximate structure.
+
+For the reasoning behind the whole progression — contention, striping, approximate
+LRU, TinyLFU, cache stampede, and CAP applied to caches — see
+[docs/concurrent-caching-notes.md](docs/concurrent-caching-notes.md).

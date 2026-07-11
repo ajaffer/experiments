@@ -6,20 +6,14 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 import java.util.function.IntFunction;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 public class LRUCacheTest {
@@ -99,7 +93,7 @@ public class LRUCacheTest {
         int threads = 16;
         Cache<Integer, Integer> cache = new LRUCacheThreadSafe<>(keys);
 
-        List<Future<?>> results = runConcurrently(threads, () -> {
+        List<Future<?>> results = CacheConcurrency.runConcurrently(threads, () -> {
             for (int k = 0; k < keys; k++) {
                 cache.put(k, k);
                 cache.get(k);
@@ -118,7 +112,7 @@ public class LRUCacheTest {
         int opsPerThread = 5_000;
         Cache<Integer, Integer> cache = new LRUCacheThreadSafe<>(50);
 
-        List<Future<?>> results = runConcurrently(threads, () -> {
+        List<Future<?>> results = CacheConcurrency.runConcurrently(threads, () -> {
             int x = 1;                                  // per-thread LCG; no shared RNG
             for (int i = 0; i < opsPerThread; i++) {
                 x = x * 1103515245 + 12345;
@@ -131,22 +125,5 @@ public class LRUCacheTest {
         for (Future<?> r : results) assertDoesNotThrow(() -> r.get());
         cache.put(999, 999);
         assertEquals(999, cache.get(999));
-    }
-
-    private static List<Future<?>> runConcurrently(int threads, Runnable task) throws InterruptedException {
-        ExecutorService pool = Executors.newFixedThreadPool(threads);
-        CountDownLatch start = new CountDownLatch(1);
-        List<Future<?>> results = new ArrayList<>();
-        for (int t = 0; t < threads; t++) {
-            results.add(pool.submit(() -> {
-                start.await();                          // release all threads together to maximize contention
-                task.run();
-                return null;
-            }));
-        }
-        start.countDown();
-        pool.shutdown();
-        assertTrue(pool.awaitTermination(10, TimeUnit.SECONDS), "tasks did not finish (possible deadlock)");
-        return results;
     }
 }
