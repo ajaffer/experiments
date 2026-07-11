@@ -1,3 +1,6 @@
+import org.experiments.cache.Cache;
+import org.experiments.cache.CaffeineLiteCache;
+import org.experiments.cache.LRUCache;
 import org.experiments.cache.RedisSampledLRUCache;
 import org.experiments.cache.StripedLRUCache;
 import org.junit.jupiter.api.Test;
@@ -111,6 +114,62 @@ public class ApproximateCacheTest {
 
         int survivors = 0;
         for (int k = 0; k < hotKeys; k++) if (cache.get(k) != null) survivors++;
+        return survivors;
+    }
+
+    // ---- Caffeine-lite: lock-free reads, TinyLFU admission ----
+
+    @Test
+    void caffeineLiteStaysWithinCapacityAfterConcurrentStorm() throws InterruptedException {
+        int capacity = 100;
+        int threads = 16;
+        var cache = new CaffeineLiteCache<Integer, Integer>(capacity);
+
+        List<Future<?>> results = CacheConcurrency.runConcurrently(threads, () -> {
+            for (int k = 0; k < 5_000; k++) {
+                cache.put(k, k);
+                cache.get(k);
+            }
+        });
+
+        for (Future<?> r : results) assertDoesNotThrow(() -> r.get());
+        cache.cleanUp();                            // force pending maintenance, then the bound is tight
+        assertTrue(cache.size() <= capacity, "size " + cache.size() + " exceeded capacity " + capacity);
+    }
+
+    // The headline property: a one-shot scan wipes a plain LRU's hot set, but TinyLFU admission
+    // refuses to let low-frequency scan keys evict the frequently-used hot keys.
+    @Test
+    void tinyLfuAdmissionResistsScanThatWipesPlainLru() {
+        int capacity = 100;
+        int hot = 10;
+
+        int lruSurvivors = hotSurvivorsAfterScan(new LRUCache<>(capacity), capacity, hot);
+        int caffeineSurvivors = hotSurvivorsAfterScan(new CaffeineLiteCache<>(capacity), capacity, hot);
+
+        assertTrue(caffeineSurvivors > lruSurvivors,
+                "TinyLFU should keep more of the hot set than LRU (caffeine=" + caffeineSurvivors
+                        + ", lru=" + lruSurvivors + ")");
+        assertTrue(caffeineSurvivors >= hot - 1,
+                "the hot set should survive the scan, but only " + caffeineSurvivors + "/" + hot + " did");
+        assertTrue(lruSurvivors <= 1,
+                "plain LRU should lose its hot set to the scan, but " + lruSurvivors + " survived");
+    }
+
+    // Prime a hot set and hammer it (building recency for LRU, frequency for TinyLFU), fill the
+    // rest of capacity, then scan a flood of one-shot cold keys. Returns surviving hot keys.
+    private static int hotSurvivorsAfterScan(Cache<Integer, Integer> cache, int capacity, int hot) {
+        for (int k = 0; k < hot; k++) cache.put(k, k);
+        for (int round = 0; round < 100; round++)
+            for (int k = 0; k < hot; k++) cache.get(k);
+        for (int k = hot; k < capacity; k++) cache.put(k, k);        // fill the rest
+
+        for (int c = 10_000; c < 10_000 + 20 * capacity; c++) cache.put(c, c);   // the scan
+
+        if (cache instanceof CaffeineLiteCache<Integer, Integer> caffeine) caffeine.cleanUp();
+
+        int survivors = 0;
+        for (int k = 0; k < hot; k++) if (cache.get(k) != null) survivors++;
         return survivors;
     }
 }

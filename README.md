@@ -139,8 +139,15 @@ progression from *correct* to *concurrent*:
 - **`RedisSampledLRUCache`** — Redis's `maxmemory-policy allkeys-lru`. Reads only
   stamp a timestamp (no list mutation → **lock-free reads**); eviction samples K
   random entries and drops the oldest. Approximate, but reads never contend.
-- **`CaffeineCache`** — a thin adapter over Caffeine (W-TinyLFU), the production
-  answer the other two approximate.
+- **`CaffeineLiteCache`** — a miniature Caffeine: lock-free reads that record into a
+  bounded buffer, drained under a `tryLock` by a *borrowed* thread (no dedicated
+  eviction thread), plus **TinyLFU admission** — a `FrequencySketch` (count-min sketch)
+  refuses to let a low-frequency newcomer evict a frequently-used key. That makes it
+  **scan-resistant**, the failure mode plain LRU can't handle: under a one-shot scan
+  that floods the cache, plain `LRUCache` loses its entire hot set (**0/10** keys
+  survive) while `CaffeineLiteCache` keeps all of it (**10/10**).
+- **`CaffeineCache`** — a thin adapter over the real Caffeine (W-TinyLFU), the
+  production answer the others approximate.
 
 This experiment has no `main` — it's exercised by tests:
 
