@@ -24,7 +24,7 @@ public class HashSpread {
 
     // a hex floating-point literal: 0x1.0p-53 means 1.0 × 2⁻⁵³ (the p is the binary exponent, like e is decimal).
     private static final double DOUBLE_UNIT = 0x1.0p-53;
-    
+
     public static void main(String[] args) {
         System.out.println("Ring positions of nodeA#0 .. nodeA#" + (VNODES - 1)
                 + " — one node's " + VNODES + " vnodes (0.0 = ring start, 1.0 = ring end):\n");
@@ -62,7 +62,7 @@ public class HashSpread {
     }
 
     private static double hashCodePosition(String key) {
-        return (key.hashCode() & 0xFFFFFFFFL)
+        return (key.hashCode() & 0xFFFFFFFFL)        // a trick to treat these 32 bits as unsigned
                 * INTEGER_UNIT;        // unsigned hashCode * 2^-32
     }
 
