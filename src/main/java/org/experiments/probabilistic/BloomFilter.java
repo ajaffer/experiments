@@ -3,6 +3,8 @@ package org.experiments.probabilistic;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.BitSet;
 
 /**
@@ -67,15 +69,11 @@ public final class BloomFilter<T> {
         return numHashes;
     }
 
-    // Splits one Murmur3-128 into two little-endian 64-bit halves (asBytes is little-endian, so the
-    // low byte comes first) — the h1, h2 that seed the double-hashing loop.
+    // Splits one Murmur3-128 into two 64-bit halves — the h1, h2 that seed the double-hashing
+    // loop. asBytes() is little-endian, so the buffer reads the halves back in that order.
     private long[] doubleHash(T item) {
-        byte[] bytes = hasher.hashInt(item.hashCode()).asBytes();
-        long h1 = 0;
-        long h2 = 0;
-        for (int i = 0; i < 8; i++) h1 |= (bytes[i] & 0xFFL) << (8 * i);
-        for (int i = 0; i < 8; i++) h2 |= (bytes[8 + i] & 0xFFL) << (8 * i);
-        return new long[] {h1, h2};
+        var buf = ByteBuffer.wrap(hasher.hashInt(item.hashCode()).asBytes()).order(ByteOrder.LITTLE_ENDIAN);
+        return new long[] {buf.getLong(), buf.getLong()};
     }
 
     private int indexFor(long combined) {
