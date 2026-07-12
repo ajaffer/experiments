@@ -18,9 +18,6 @@ final class FrequencySketch<K> {
 
     private static final int COUNTERS = 4;          // cells (hashes) per key
     private static final int MAX_COUNT = 15;        // cap so aging stays meaningful
-    // One seeded Murmur3 per row, so a key indexes COUNTERS independent cells. The seeds are
-    // arbitrary — any distinct ints work; these are recognizable hashing constants.
-    private static final int[] SEEDS = {0x7f4a7c15, 0x9e3779b9, 0x3c6ef35f, 0x1b873593};
     private static final HashFunction[] HASHERS = buildHashers();
 
     private final int[] table;
@@ -65,7 +62,9 @@ final class FrequencySketch<K> {
 
     private static HashFunction[] buildHashers() {
         var hashers = new HashFunction[COUNTERS];
-        for (int i = 0; i < COUNTERS; i++) hashers[i] = Hashing.murmur3_32_fixed(SEEDS[i]);
+        // Seed each row with its index so a key hashes to COUNTERS independent cells — any
+        // distinct seeds work, and Murmur3 avalanches 0,1,2,3 into uncorrelated hashes.
+        for (int i = 0; i < COUNTERS; i++) hashers[i] = Hashing.murmur3_32_fixed(i);
         return hashers;
     }
 
@@ -80,10 +79,14 @@ final class FrequencySketch<K> {
     // to show the mechanism a count-min cell address is built from.
     @SuppressWarnings("unused")
     private int indexOfHandRolled(int keyHash, int row) {
+        // Distinct, well-spread per-row seeds so each row hashes independently (the live path
+        // gets this by seeding Murmur3 per row). These are recognizable hashing constants, but
+        // any distinct well-mixed ints work.
+        final int[] seeds = {0x7f4a7c15, 0x9e3779b9, 0x3c6ef35f, 0x1b873593};
         // A large odd multiplier (golden-ratio / xxHash PRIME32_1) — odd so the multiply is a
         // bijection mod 2^32 and loses no information.
         final int mixMultiplier = 0x9e3779b1;
-        int h = keyHash ^ SEEDS[row];   // per-row seed → each of the COUNTERS cells indexes differently
+        int h = keyHash ^ seeds[row];   // per-row seed → each of the COUNTERS cells indexes differently
         h ^= (h >>> 16);                // spread the raw hashCode's high bits before mixing
         h *= mixMultiplier;             // scatter the bits (avalanche)
         h ^= h >>> 15;                  // fold high bits down so the low-bit mask sees their entropy
