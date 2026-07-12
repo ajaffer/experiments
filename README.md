@@ -162,3 +162,20 @@ broken lock. The approximate caches can't be tested by exact eviction order, so
 `ApproximateCacheTest` asserts **invariants** (size stays bounded, no corruption
 under a thread storm) and **statistics** (a hot set survives eviction; a larger
 sample size retains it better) — the right way to test an approximate structure.
+
+### `org.experiments.probabilistic` — Bloom filter
+
+A **`BloomFilter`**: a compact probabilistic set that answers *"definitely not present"* or
+*"possibly present"* — no false negatives, a tunable false-positive rate, and no deletions
+(clearing a bit could erase one shared with another member). Its signature use is skipping
+work for absent keys: **Cassandra and other LSM-tree stores keep one filter per SSTable**, so
+a lookup for a missing key is rejected in memory instead of touching disk.
+
+Cousin of the count-min sketch in `org.experiments.cache` — both are bit/counter arrays probed
+by several hashes; the filter answers *membership*, the sketch answers *frequency*. It's sized
+from the expected element count `n` and target rate `p` via the standard optima
+(`m = -n·ln(p)/(ln2)²` bits, `k = (m/n)·ln2` hashes), and derives its `k` indices from two 64-bit
+halves of one Murmur3-128 hash by Kirsch–Mitzenmacher double hashing (`gᵢ = h1 + i·h2`) — as
+accurate as `k` independent hashes but computing only one. For `n=10k, p=1%` it builds a 95,851-bit
+filter with 7 hashes and measures ~0.85% false positives. Tested (`BloomFilterTest`) on the
+no-false-negatives guarantee and that the false-positive rate stays near target.
