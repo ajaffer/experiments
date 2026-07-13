@@ -24,6 +24,14 @@ import java.util.BitSet;
  * Kirsch–Mitzenmacher double hashing ({@code gᵢ = h1 + i·h2}), which is as accurate as {@code k}
  * independent hashes but computes only one. A production filter (e.g. Guava's {@code BloomFilter})
  * hashes the whole object through a {@code Funnel}; this hashes {@code hashCode()} for simplicity.
+ *
+ * <p>References:
+ * <ul>
+ *   <li>Bloom, B. (1970). <i>Space/Time Trade-offs in Hash Coding with Allowable Errors</i>, CACM
+ *       13(7) — the original Bloom filter.</li>
+ *   <li>Kirsch, A. &amp; Mitzenmacher, M. (2006). <i>Less Hashing, Same Performance: Building a
+ *       Better Bloom Filter</i>, ESA — the {@code h1 + i·h2} double-hashing scheme.</li>
+ * </ul>
  */
 public final class BloomFilter<T> {
 
