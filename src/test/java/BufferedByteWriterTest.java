@@ -95,7 +95,7 @@ public class BufferedByteWriterTest {
         while (buf.hasRemaining()) {
             long id = buf.getInt();
             long seq = buf.getInt();
-            found.add((id << 32) | seq);        // unique key per (id, seq); collision → corruption
+            found.add((id << 32) | (seq & 0xFFFFFFFFL));    // pack (id, seq) into one key; mask low half
         }
         assertEquals(threads * perThread, found.size(), "records lost, duplicated, or corrupted");
     }
