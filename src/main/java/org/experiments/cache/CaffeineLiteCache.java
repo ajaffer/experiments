@@ -44,6 +44,7 @@ public class CaffeineLiteCache<U, V> implements Cache<U, V> {
     private final FrequencySketch<U> sketch;
 
     public CaffeineLiteCache(int capacity) {
+        if (capacity <= 0) throw new IllegalArgumentException("capacity must be > 0");
         this.capacity = capacity;
         this.sketch = new FrequencySketch<>(capacity);
     }
@@ -121,11 +122,7 @@ public class CaffeineLiteCache<U, V> implements Cache<U, V> {
             recency.put(candidate, Boolean.TRUE);
             return;
         }
-        if (recency.isEmpty()) {                    // capacity 0: nothing is admissible
-            data.remove(candidate);
-            return;
-        }
-        U victim = recency.keySet().iterator().next();      // least-recently-used
+        U victim = recency.keySet().iterator().next();      // least-recently-used (recency non-empty: capacity >= 1)
         if (sketch.frequency(candidate) > sketch.frequency(victim)) {
             recency.remove(victim);
             data.remove(victim);

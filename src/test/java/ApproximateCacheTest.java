@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.concurrent.Future;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -118,6 +119,12 @@ public class ApproximateCacheTest {
     }
 
     // ---- Caffeine-lite: lock-free reads, TinyLFU admission ----
+
+    @Test
+    void caffeineLiteRejectsNonPositiveCapacity() {
+        assertThrows(IllegalArgumentException.class, () -> new CaffeineLiteCache<Integer, Integer>(0));
+        assertThrows(IllegalArgumentException.class, () -> new CaffeineLiteCache<Integer, Integer>(-1));
+    }
 
     @Test
     void caffeineLiteStaysWithinCapacityAfterConcurrentStorm() throws InterruptedException {
