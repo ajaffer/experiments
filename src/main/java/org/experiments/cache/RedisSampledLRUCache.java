@@ -14,6 +14,10 @@ import java.util.concurrent.ThreadLocalRandom;
  * capacity, eviction samples a handful of entries and drops the oldest, trading exact-LRU
  * precision for cheap, lock-free reads. Eviction quality improves with the sample size
  * (Redis found a sample of 10 approaches true LRU; 5 is its default).
+ *
+ * <p>The random sample is drawn by reservoir sampling (Vitter, J. (1985). <i>Random Sampling
+ * with a Reservoir</i>, ACM TOMS — Algorithm R), which draws a uniform sample in one pass over
+ * entries of unknown count.
  */
 public class RedisSampledLRUCache<U, V> implements Cache<U, V> {
 

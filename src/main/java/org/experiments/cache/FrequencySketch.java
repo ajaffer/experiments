@@ -13,6 +13,14 @@ import com.google.common.hash.Hashing;
  * <p>Not thread-safe — the owning cache touches it only under its maintenance lock. A faithful
  * W-TinyLFU (e.g. Caffeine) packs 4-bit counters and tunes the reset; this keeps one int per
  * cell for clarity.
+ *
+ * <p>References:
+ * <ul>
+ *   <li>Cormode, G. &amp; Muthukrishnan, S. (2005). <i>An Improved Data Stream Summary: The
+ *       Count-Min Sketch and its Applications</i>, Journal of Algorithms — the sketch itself.</li>
+ *   <li>Einziger, G., Friedman, R. &amp; Manes, B. (2017). <i>TinyLFU: A Highly Efficient Cache
+ *       Admission Policy</i>, ACM TOS — the frequency-based admission this sketch feeds.</li>
+ * </ul>
  */
 final class FrequencySketch<K> {
 
